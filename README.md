@@ -102,6 +102,31 @@ write.table(DEGlist,file="geo_sig.txt",quote=F,sep="\t",row.names=TRUE,col.name=
 
 **Visualization of data**
 
+# Define subsets with consistent thresholds
+upregulated <- subset(DEGlist, logFC > 1.5)      # up-regulated
+downregulated <- subset(DEGlist, logFC < -1.5)   # down-regulated (note: negative)
+
+# Write to files
+write.table(upregulated, file="upregulated.txt", quote=F, sep="\t", row.names=TRUE, col.names=T)
+write.table(downregulated, file="downregulated.txt", quote=F, sep="\t", row.names=TRUE, col.names=T)
+
+# Create volcano plot data frame
+df <- data.frame(
+  gene = rownames(DEGlist),
+  logFC = DEGlist$logFC,
+  adjPval = DEGlist$adj.P.Val,
+  status = ifelse(DEGlist$logFC > 1.5, "Up", 
+           ifelse(DEGlist$logFC < -1.5, "Down", "Unchanged"))
+)
+
+# Plot
+ggplot(df, aes(x = logFC, y = -log10(adjPval))) +
+  geom_point(aes(color = status)) +
+  scale_color_manual(values = c("Up" = "red", "Down" = "green", "Unchanged" = "gray"))
+
+  
+**OR**
+
 volcanoplot(DEGlist, highlight = 0L, hl.col = 'BLUE', coef = 1L, names = tmp1$genes$ID, xlab = 'Log2 Fold Change' , ylab = NULL, pch = 16, cex =0.35,values=c("U","D"),hl.col=c("green","red" ))
 volcanoplot(DEGlist, highlight=8, names = rownames(tmp1), main="Tumor vs Normal")
 upregulated<-subset(DEGlist, logFC > 1.5) # up-regulated
