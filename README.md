@@ -1,22 +1,26 @@
 # Limma
-Statistical significance analysis for RNA-seq data
+**Statistical significance analysis for RNA-seq data**
 
-##load required libaries##
+**load required libaries**
 library(edgeR)
 library(RColorBrewer)
 library(gplots)
 library(limma)
-#load input data#
+library(ggplot2)
+library(ggrepel)
+
+**load input data**
 count1 <- read.csv("filte_low_geo.csv", header = TRUE, sep = ",", row.names = 1)
 count1
 dim(count1)#(38442   388)
 
-#transpose
+**transpose your data**
 
 dd1_t<-t(count1)
 dd1_t
 dim(dd1_t)
-#########normalization#####
+
+**Normalize the data to fit into ML model for downstream analysis**
 min_max_normalization <- function(x) {
   return((x - min(x)) / (max(x) - min(x)))
 }
@@ -52,18 +56,15 @@ dim(metadata)
 identical(metadata$Run, colnames(count1))
 counts <- df_clean[,metadata$Run]#if rows are not same than run this line)
 
-#preprocessing
+**preprocessing**
 d0 <- calcNormFactors(d0)
 d0$samples
 
 #plotMDS(d0, col = as.numeric(metadata))
 
 #write.table(d0,"normalizationd0.txt",sep = "\t")
-
-
 mm <- model.matrix(~0 + Stage, data = metadata)
 mm
-
 
 #logcpm transformation
 logcpm<-cpm(d0, log=TRUE)
@@ -74,34 +75,32 @@ memory.limit()###16180
 memory.limit(size=800000)###41000
 y <- voom(d0, mm, plot = T)
 write.table(d0, file = 'voom_transformation_input200.txt', sep = "\t", quote = F)
-#Fitting linear models in limma
 
+#Fitting linear models in limma
 fit <- lmFit(y, mm)
 head(coef(fit))
 
 #Specify which groups to compare using contrasts:
 contr <- makeContrasts(StageNormal- StageTumor, levels = colnames(coef(fit)))
 contr
+
 #Estimate contrast for each gene
 tmp <- contrasts.fit(fit, contr)
 tmp
 tmp1 <- eBayes(tmp)
 tmp1
 
-
 #toptable with adjustment like BH...
 top.table <- topTable(tmp1, adjust.method = "BH", sort.by = "P", n = Inf)
 head(top.table,20)
-
 length(which(top.table$adj.P.Val < 0.05))#(34961)
-
 DEGlist<-top.table[which(top.table$adj.P.Val<0.05),]
 head(DEGlist)
 
+**save output data**
 write.table(DEGlist,file="geo_sig.txt",quote=F,sep="\t",row.names=TRUE,col.name=T)
 
-library(ggplot2)
-library(ggrepel)
+**Visualization of data**
 
 volcanoplot(DEGlist, highlight = 0L, hl.col = 'BLUE', coef = 1L, names = tmp1$genes$ID, xlab = 'Log2 Fold Change' , ylab = NULL, pch = 16, cex =0.35,values=c("U","D"),hl.col=c("green","red" ))
 volcanoplot(DEGlist, highlight=8, names = rownames(tmp1), main="Tumor vs Normal")
